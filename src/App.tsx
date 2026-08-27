@@ -1,6 +1,7 @@
 import { useRef, useState } from "react";
 import { Toast } from "./components/review/Toast";
 import { ChevronLeftIcon } from "./components/upload/icons";
+import { ImageGalleryUploader } from "./components/upload/ImageGalleryUploader";
 import { MediaUploader } from "./components/upload/MediaUploader";
 import { MediaUploaderLegacy } from "./components/upload/MediaUploaderLegacy";
 import { MediaUploaderTabbed } from "./components/upload/MediaUploaderTabbed";
@@ -55,37 +56,16 @@ function App() {
   return (
     <div className="min-h-svh">
       <main className="mx-auto flex max-w-xl flex-col gap-6 px-4 py-10">
-        <div>
-          <h1 className="text-[19px] font-semibold" style={{ color: "var(--ink)" }}>
-            Media upload
-          </h1>
-          <p className="text-[13px]" style={{ color: "var(--ink-soft)" }}>
-            Three takes on the same upload step, used for both the cover image and the product file.
-          </p>
-        </div>
-
-        <div className="flex flex-wrap items-center gap-2">
-          <div className="flex overflow-hidden rounded-full border" style={{ borderColor: "var(--line-strong)" }}>
-            {(Object.keys(MODE_LABEL) as Mode[]).map((m) => (
-              <button
-                key={m}
-                type="button"
-                onClick={() => handleModeChange(m)}
-                className="px-3.5 py-1.5 text-[13px] font-medium transition-colors"
-                style={mode === m ? { background: "var(--ink)", color: "var(--paper)" } : { color: "var(--ink-soft)" }}
-              >
-                {MODE_LABEL[m]}
-              </button>
-            ))}
+        <div className="flex items-start justify-between gap-3">
+          <div>
+            <h1 className="text-[19px] font-semibold" style={{ color: "var(--ink)" }}>
+              Product uploads
+            </h1>
+            <p className="text-[13px]" style={{ color: "var(--ink-soft)" }}>
+              The cover gallery matches production. The product file below has three takes on the upload step.
+            </p>
           </div>
-
-          {mode !== "tabbed" && (
-            <span className="text-[12px]" style={{ color: "var(--ink-faint)" }}>
-              clicks to open file picker: <strong style={{ color: "var(--ink)" }}>{clicksToPicker ?? "—"}</strong>
-            </span>
-          )}
-
-          <button type="button" onClick={handleReset} className="ml-auto text-[12px] underline underline-offset-2" style={{ color: "var(--ink-faint)" }}>
+          <button type="button" onClick={handleReset} className="shrink-0 text-[12px] underline underline-offset-2" style={{ color: "var(--ink-faint)" }}>
             Reset
           </button>
         </div>
@@ -143,42 +123,13 @@ function App() {
                 </p>
               </div>
 
-              {mode === "current" ? (
-                <MediaUploaderLegacy
-                  key={`cover-current-${resetKey}`}
-                  value={coverFiles}
-                  onChange={setCoverFiles}
-                  accept="image/*"
-                  multiple={false}
-                  dropzoneHint="PNG or JPG, up to 10MB"
-                  onModalOpen={() => setClicksToPicker(1)}
-                  onPickerOpen={() => setClicksToPicker(2)}
-                  onSubmit={() => showToast("Cover image uploaded")}
-                  onLibraryClick={() => showToast("Library picker is unchanged — this covers the device-upload path.")}
-                />
-              ) : mode === "tabbed" ? (
-                <MediaUploaderTabbed
-                  key={`cover-tabbed-${resetKey}`}
-                  value={coverFiles}
-                  onChange={setCoverFiles}
-                  accept="image/*"
-                  multiple={false}
-                  dropzoneHint="PNG or JPG, up to 10MB"
-                  {...commonProps}
-                  onSubmit={() => showToast(`Cover image uploaded`)}
-                />
-              ) : (
-                <MediaUploader
-                  key={`cover-fixed-${resetKey}`}
-                  value={coverFiles}
-                  onChange={setCoverFiles}
-                  accept="image/*"
-                  multiple={false}
-                  dropzoneHint="PNG or JPG, up to 10MB"
-                  {...commonProps}
-                  onSubmit={() => showToast(`Cover image uploaded`)}
-                />
-              )}
+              <ImageGalleryUploader
+                key={`cover-${resetKey}`}
+                value={coverFiles}
+                onChange={setCoverFiles}
+                onLibraryClick={() => showToast("Library picker isn't wired up in this exploration yet.")}
+                onCapacityExceeded={(allowed) => showToast(`You can add up to ${allowed} photos.`)}
+              />
             </div>
 
             <div className="flex flex-col gap-3 border-t pt-6" style={{ borderColor: "var(--app-line)" }}>
@@ -189,6 +140,27 @@ function App() {
                 <p className="text-[12px]" style={{ color: "var(--app-muted)" }}>
                   The actual product — this is what customers get after they pay.
                 </p>
+              </div>
+
+              <div className="flex flex-wrap items-center gap-2">
+                <div className="flex overflow-hidden rounded-full border" style={{ borderColor: "var(--app-line-strong)" }}>
+                  {(Object.keys(MODE_LABEL) as Mode[]).map((m) => (
+                    <button
+                      key={m}
+                      type="button"
+                      onClick={() => handleModeChange(m)}
+                      className="px-3 py-1 text-[12px] font-medium transition-colors"
+                      style={mode === m ? { background: "var(--app-ink)", color: "var(--app-bg)" } : { color: "var(--app-muted)" }}
+                    >
+                      {MODE_LABEL[m]}
+                    </button>
+                  ))}
+                </div>
+                {mode !== "tabbed" && (
+                  <span className="text-[12px]" style={{ color: "var(--app-muted)" }}>
+                    clicks to open file picker: <strong style={{ color: "var(--app-ink)" }}>{clicksToPicker ?? "—"}</strong>
+                  </span>
+                )}
               </div>
 
               {mode === "current" ? (
@@ -202,7 +174,7 @@ function App() {
                   onModalOpen={() => setClicksToPicker(1)}
                   onPickerOpen={() => setClicksToPicker(2)}
                   onSubmit={(files) => showToast(`${files.length} product file${plural(files.length)} uploaded`)}
-                  onLibraryClick={() => showToast("Library picker is unchanged — this covers the device-upload path.")}
+                  onLibraryClick={() => showToast("Library picker isn't wired up in this exploration yet.")}
                 />
               ) : mode === "tabbed" ? (
                 <MediaUploaderTabbed
