@@ -1,5 +1,6 @@
 import { useRef, useState } from "react";
 import { Toast } from "./components/review/Toast";
+import { FileListUploader } from "./components/upload/FileListUploader";
 import { ChevronLeftIcon } from "./components/upload/icons";
 import { ImageGalleryUploader } from "./components/upload/ImageGalleryUploader";
 import { MediaUploader } from "./components/upload/MediaUploader";
@@ -12,10 +13,11 @@ const MODE_LABEL: Record<Mode, string> = {
   current: "Current",
   fixed: "Fixed",
   tabbed: "Tabbed",
+  new: "New",
 };
 
 function App() {
-  const [mode, setMode] = useState<Mode>("fixed");
+  const [mode, setMode] = useState<Mode>("new");
   const [clicksToPicker, setClicksToPicker] = useState<number | null>(null);
   const [resetKey, setResetKey] = useState(0);
   const [coverFiles, setCoverFiles] = useState<UploadedFile[]>([]);
@@ -62,7 +64,7 @@ function App() {
               Product uploads
             </h1>
             <p className="text-[13px]" style={{ color: "var(--ink-soft)" }}>
-              The cover gallery matches production. The product file below has three takes on the upload step.
+              The cover gallery matches production. The product file below has four takes on the upload step.
             </p>
           </div>
           <button type="button" onClick={handleReset} className="shrink-0 text-[12px] underline underline-offset-2" style={{ color: "var(--ink-faint)" }}>
@@ -156,7 +158,7 @@ function App() {
                     </button>
                   ))}
                 </div>
-                {mode !== "tabbed" && (
+                {(mode === "current" || mode === "fixed") && (
                   <span className="text-[12px]" style={{ color: "var(--app-muted)" }}>
                     clicks to open file picker: <strong style={{ color: "var(--app-ink)" }}>{clicksToPicker ?? "—"}</strong>
                   </span>
@@ -186,6 +188,16 @@ function App() {
                   dropzoneHint="PDF, ZIP or DOCX, up to 500MB"
                   {...commonProps}
                   onSubmit={(files) => showToast(`${files.length} product file${plural(files.length)} uploaded`)}
+                />
+              ) : mode === "new" ? (
+                <FileListUploader
+                  key={`product-new-${resetKey}`}
+                  value={productFiles}
+                  onChange={setProductFiles}
+                  dropzoneLabel="Drop your product file here."
+                  dropzoneHint="PDF, ZIP or DOCX, up to 500MB."
+                  onLibraryClick={() => showToast("Library picker isn't wired up in this exploration yet.")}
+                  onCapacityExceeded={(allowed) => showToast(`You can add up to ${allowed} files.`)}
                 />
               ) : (
                 <MediaUploader
