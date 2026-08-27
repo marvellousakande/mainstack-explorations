@@ -1,1 +1,1 @@
-export type Mode = "current" | "fixed";
+export type Mode = "current" | "fixed" | "tabbed";

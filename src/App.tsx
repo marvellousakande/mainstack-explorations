@@ -3,14 +3,22 @@ import { Toast } from "./components/review/Toast";
 import { ChevronLeftIcon } from "./components/upload/icons";
 import { MediaUploader } from "./components/upload/MediaUploader";
 import { MediaUploaderLegacy } from "./components/upload/MediaUploaderLegacy";
+import { MediaUploaderTabbed } from "./components/upload/MediaUploaderTabbed";
 import { revokeUploadedFiles, type UploadedFile } from "./components/upload/types";
 import type { Mode } from "./lib/mode";
+
+const MODE_LABEL: Record<Mode, string> = {
+  current: "Current",
+  fixed: "Fixed",
+  tabbed: "Tabbed",
+};
 
 function App() {
   const [mode, setMode] = useState<Mode>("fixed");
   const [clicksToPicker, setClicksToPicker] = useState<number | null>(null);
   const [resetKey, setResetKey] = useState(0);
-  const [mediaFiles, setMediaFiles] = useState<UploadedFile[]>([]);
+  const [coverFiles, setCoverFiles] = useState<UploadedFile[]>([]);
+  const [productFiles, setProductFiles] = useState<UploadedFile[]>([]);
   const [toastText, setToastText] = useState<string | null>(null);
 
   const toastTimerRef = useRef<number | undefined>(undefined);
@@ -29,14 +37,20 @@ function App() {
   }
 
   function handleReset() {
-    revokeUploadedFiles(mediaFiles);
-    setMediaFiles([]);
+    revokeUploadedFiles(coverFiles);
+    revokeUploadedFiles(productFiles);
+    setCoverFiles([]);
+    setProductFiles([]);
     setClicksToPicker(null);
     setResetKey((k) => k + 1);
     showToast("Reset");
   }
 
   const plural = (n: number) => (n === 1 ? "" : "s");
+
+  const commonProps = {
+    onPickerOpen: () => setClicksToPicker(1),
+  };
 
   return (
     <div className="min-h-svh">
@@ -46,33 +60,30 @@ function App() {
             Media upload
           </h1>
           <p className="text-[13px]" style={{ color: "var(--ink-soft)" }}>
-            Current vs. fixed: does the file picker open on the first click, or the second?
+            Three takes on the same upload step, used for both the cover image and the product file.
           </p>
         </div>
 
         <div className="flex flex-wrap items-center gap-2">
           <div className="flex overflow-hidden rounded-full border" style={{ borderColor: "var(--line-strong)" }}>
-            <button
-              type="button"
-              onClick={() => handleModeChange("current")}
-              className="px-3.5 py-1.5 text-[13px] font-medium transition-colors"
-              style={mode === "current" ? { background: "var(--ink)", color: "var(--paper)" } : { color: "var(--ink-soft)" }}
-            >
-              Current
-            </button>
-            <button
-              type="button"
-              onClick={() => handleModeChange("fixed")}
-              className="px-3.5 py-1.5 text-[13px] font-medium transition-colors"
-              style={mode === "fixed" ? { background: "var(--ink)", color: "var(--paper)" } : { color: "var(--ink-soft)" }}
-            >
-              Fixed
-            </button>
+            {(Object.keys(MODE_LABEL) as Mode[]).map((m) => (
+              <button
+                key={m}
+                type="button"
+                onClick={() => handleModeChange(m)}
+                className="px-3.5 py-1.5 text-[13px] font-medium transition-colors"
+                style={mode === m ? { background: "var(--ink)", color: "var(--paper)" } : { color: "var(--ink-soft)" }}
+              >
+                {MODE_LABEL[m]}
+              </button>
+            ))}
           </div>
 
-          <span className="text-[12px]" style={{ color: "var(--ink-faint)" }}>
-            clicks to open file picker: <strong style={{ color: "var(--ink)" }}>{clicksToPicker ?? "—"}</strong>
-          </span>
+          {mode !== "tabbed" && (
+            <span className="text-[12px]" style={{ color: "var(--ink-faint)" }}>
+              clicks to open file picker: <strong style={{ color: "var(--ink)" }}>{clicksToPicker ?? "—"}</strong>
+            </span>
+          )}
 
           <button type="button" onClick={handleReset} className="ml-auto text-[12px] underline underline-offset-2" style={{ color: "var(--ink-faint)" }}>
             Reset
@@ -128,27 +139,92 @@ function App() {
                   Media
                 </h2>
                 <p className="text-[12px]" style={{ color: "var(--app-muted)" }}>
-                  Add images or files that showcase your product. Nothing here leaves your browser.
+                  This becomes your product's cover — the default image shown before someone buys.
                 </p>
               </div>
 
               {mode === "current" ? (
                 <MediaUploaderLegacy
-                  key={`current-${resetKey}`}
-                  value={mediaFiles}
-                  onChange={setMediaFiles}
+                  key={`cover-current-${resetKey}`}
+                  value={coverFiles}
+                  onChange={setCoverFiles}
+                  accept="image/*"
+                  multiple={false}
+                  dropzoneHint="PNG or JPG, up to 10MB"
                   onModalOpen={() => setClicksToPicker(1)}
                   onPickerOpen={() => setClicksToPicker(2)}
-                  onSubmit={(files) => showToast(`${files.length} file${plural(files.length)} uploaded`)}
+                  onSubmit={() => showToast("Cover image uploaded")}
                   onLibraryClick={() => showToast("Library picker is unchanged — this covers the device-upload path.")}
+                />
+              ) : mode === "tabbed" ? (
+                <MediaUploaderTabbed
+                  key={`cover-tabbed-${resetKey}`}
+                  value={coverFiles}
+                  onChange={setCoverFiles}
+                  accept="image/*"
+                  multiple={false}
+                  dropzoneHint="PNG or JPG, up to 10MB"
+                  {...commonProps}
+                  onSubmit={() => showToast(`Cover image uploaded`)}
                 />
               ) : (
                 <MediaUploader
-                  key={`fixed-${resetKey}`}
-                  value={mediaFiles}
-                  onChange={setMediaFiles}
-                  onPickerOpen={() => setClicksToPicker(1)}
-                  onSubmit={(files) => showToast(`${files.length} file${plural(files.length)} uploaded`)}
+                  key={`cover-fixed-${resetKey}`}
+                  value={coverFiles}
+                  onChange={setCoverFiles}
+                  accept="image/*"
+                  multiple={false}
+                  dropzoneHint="PNG or JPG, up to 10MB"
+                  {...commonProps}
+                  onSubmit={() => showToast(`Cover image uploaded`)}
+                />
+              )}
+            </div>
+
+            <div className="flex flex-col gap-3 border-t pt-6" style={{ borderColor: "var(--app-line)" }}>
+              <div>
+                <h2 className="text-[13px] font-semibold" style={{ color: "var(--app-ink)" }}>
+                  File
+                </h2>
+                <p className="text-[12px]" style={{ color: "var(--app-muted)" }}>
+                  The actual product — this is what customers get after they pay.
+                </p>
+              </div>
+
+              {mode === "current" ? (
+                <MediaUploaderLegacy
+                  key={`product-current-${resetKey}`}
+                  value={productFiles}
+                  onChange={setProductFiles}
+                  accept=".pdf,.zip,.doc,.docx,.epub,application/pdf,application/zip"
+                  dropzoneLabel="Upload your product file"
+                  dropzoneHint="PDF, ZIP or DOCX, up to 500MB"
+                  onModalOpen={() => setClicksToPicker(1)}
+                  onPickerOpen={() => setClicksToPicker(2)}
+                  onSubmit={(files) => showToast(`${files.length} product file${plural(files.length)} uploaded`)}
+                  onLibraryClick={() => showToast("Library picker is unchanged — this covers the device-upload path.")}
+                />
+              ) : mode === "tabbed" ? (
+                <MediaUploaderTabbed
+                  key={`product-tabbed-${resetKey}`}
+                  value={productFiles}
+                  onChange={setProductFiles}
+                  accept=".pdf,.zip,.doc,.docx,.epub,application/pdf,application/zip"
+                  dropzoneLabel="Upload your product file"
+                  dropzoneHint="PDF, ZIP or DOCX, up to 500MB"
+                  {...commonProps}
+                  onSubmit={(files) => showToast(`${files.length} product file${plural(files.length)} uploaded`)}
+                />
+              ) : (
+                <MediaUploader
+                  key={`product-fixed-${resetKey}`}
+                  value={productFiles}
+                  onChange={setProductFiles}
+                  accept=".pdf,.zip,.doc,.docx,.epub,application/pdf,application/zip"
+                  dropzoneLabel="Upload your product file"
+                  dropzoneHint="PDF, ZIP or DOCX, up to 500MB"
+                  {...commonProps}
+                  onSubmit={(files) => showToast(`${files.length} product file${plural(files.length)} uploaded`)}
                 />
               )}
             </div>

@@ -10,6 +10,9 @@ export interface MediaUploaderLegacyProps {
   value: UploadedFile[];
   onChange: (files: UploadedFile[]) => void;
   accept?: string;
+  multiple?: boolean;
+  dropzoneLabel?: string;
+  dropzoneHint?: string;
   onModalOpen?: () => void;
   onPickerOpen?: () => void;
   onFilesPicked?: (files: UploadedFile[]) => void;
@@ -25,7 +28,20 @@ export interface MediaUploaderLegacyProps {
  * button — the OS picker only opens on that second click. Delete this
  * file once the fix in MediaUploader ships.
  */
-export function MediaUploaderLegacy({ value, onChange, accept = "image/*,video/*", onModalOpen, onPickerOpen, onFilesPicked, onSubmit, onCancel, onLibraryClick }: MediaUploaderLegacyProps) {
+export function MediaUploaderLegacy({
+  value,
+  onChange,
+  accept = "image/*,video/*",
+  multiple = true,
+  dropzoneLabel = "Upload your files here",
+  dropzoneHint = "PNG, JPG, MP4 up to 50MB",
+  onModalOpen,
+  onPickerOpen,
+  onFilesPicked,
+  onSubmit,
+  onCancel,
+  onLibraryClick,
+}: MediaUploaderLegacyProps) {
   const inputRef = useRef<HTMLInputElement>(null);
   const [isIntroOpen, setIsIntroOpen] = useState(false);
   const [pendingFiles, setPendingFiles] = useState<UploadedFile[]>([]);
@@ -108,14 +124,14 @@ export function MediaUploaderLegacy({ value, onChange, accept = "image/*,video/*
           style={{ borderColor: "var(--app-line-strong)", color: "var(--app-ink)" }}
         >
           <UploadIcon className="h-6 w-6 text-[var(--app-muted)]" />
-          <span className="text-[13px] font-medium">Upload your files here</span>
+          <span className="text-[13px] font-medium">{dropzoneLabel}</span>
           <span className="text-[12px]" style={{ color: "var(--app-muted)" }}>
-            or <span className="underline">browse</span> · PNG, JPG, MP4 up to 50MB
+            or <span className="underline">browse</span> · {dropzoneHint}
           </span>
         </button>
       </div>
 
-      <input ref={inputRef} type="file" multiple accept={accept} onChange={handleFileChange} className="hidden" />
+      <input ref={inputRef} type="file" multiple={multiple} accept={accept} onChange={handleFileChange} className="hidden" />
 
       {isIntroOpen && (
         <Modal
@@ -148,7 +164,7 @@ export function MediaUploaderLegacy({ value, onChange, accept = "image/*,video/*
           >
             <UploadIcon className="h-6 w-6 text-[var(--app-muted)]" />
             <p className="text-[13px] font-medium" style={{ color: "var(--app-ink)" }}>
-              Upload your files here
+              {dropzoneLabel}
             </p>
             <p className="text-[12px]" style={{ color: "var(--app-muted)" }}>
               or <span className="underline">browse</span> from your computer
