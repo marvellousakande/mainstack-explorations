@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { FileRow } from "./FileRow";
-import { MoreIcon, TrashIcon } from "./icons";
+import { ImagePlusIcon, MoreIcon, TrashIcon } from "./icons";
 import type { UploadedFile } from "./types";
 
 interface FilesDisplayProps {
@@ -8,6 +8,10 @@ interface FilesDisplayProps {
   onRemove: (id: string) => void;
   /** "gallery" = hero + filmstrip (cover image). "list" = plain rows (product file). */
   variant: "gallery" | "list";
+  /** Gallery only: shows a trailing "+" tile in the filmstrip when there's room for more. */
+  canAddMore?: boolean;
+  onAddFromDevice?: () => void;
+  onAddFromLibrary?: () => void;
 }
 
 /**
@@ -15,9 +19,10 @@ interface FilesDisplayProps {
  * the time they land here they've finished "uploading", so this is
  * purely a browse/manage view, not part of the upload step itself.
  */
-export function FilesDisplay({ files, onRemove, variant }: FilesDisplayProps) {
+export function FilesDisplay({ files, onRemove, variant, canAddMore, onAddFromDevice, onAddFromLibrary }: FilesDisplayProps) {
   const [activeId, setActiveId] = useState<string | null>(files[0]?.id ?? null);
   const [openMenuId, setOpenMenuId] = useState<string | null>(null);
+  const [isAddMenuOpen, setIsAddMenuOpen] = useState(false);
 
   useEffect(() => {
     if (!files.some((file) => file.id === activeId)) setActiveId(files[0]?.id ?? null);
@@ -118,6 +123,49 @@ export function FilesDisplay({ files, onRemove, variant }: FilesDisplayProps) {
             </div>
           );
         })}
+
+        {canAddMore && (
+          <div className="relative h-20 w-20 shrink-0">
+            <button
+              type="button"
+              onClick={() => setIsAddMenuOpen((prev) => !prev)}
+              aria-label="Add another photo"
+              className="grid h-full w-full place-items-center rounded-xl border-2 border-dashed transition-colors hover:bg-black/[0.02]"
+              style={{ borderColor: "var(--app-line-strong)", color: "var(--app-muted)" }}
+            >
+              <ImagePlusIcon className="h-5 w-5" />
+            </button>
+            {isAddMenuOpen && (
+              <div
+                className="absolute left-0 top-full z-10 mt-1 flex w-40 flex-col overflow-hidden rounded-lg border text-left text-[12px]"
+                style={{ borderColor: "var(--app-line)", background: "var(--app-bg)", boxShadow: "var(--shadow-card)" }}
+              >
+                <button
+                  type="button"
+                  onClick={() => {
+                    setIsAddMenuOpen(false);
+                    onAddFromDevice?.();
+                  }}
+                  className="px-3 py-2 text-left transition-colors hover:bg-black/5"
+                  style={{ color: "var(--app-ink)" }}
+                >
+                  Upload from device
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setIsAddMenuOpen(false);
+                    onAddFromLibrary?.();
+                  }}
+                  className="px-3 py-2 text-left transition-colors hover:bg-black/5"
+                  style={{ color: "var(--app-ink)" }}
+                >
+                  Select from library
+                </button>
+              </div>
+            )}
+          </div>
+        )}
       </div>
     </div>
   );

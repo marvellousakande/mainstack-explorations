@@ -2,8 +2,10 @@ import type { ReactNode } from "react";
 import { useEffect, useRef, useState, type ChangeEvent } from "react";
 import { FileRow } from "./FileRow";
 import { FilesDisplay } from "./FilesDisplay";
+import { LibraryPickerModal } from "./LibraryPickerModal";
 import { Modal } from "./Modal";
 import { UploadEntryPoint } from "./UploadEntryPoint";
+import { libraryItemToUploadedFile, type LibraryItem } from "./libraryItems";
 import { simulateUpload } from "./simulateUpload";
 import { createUploadedFiles, revokeUploadedFiles, type UploadedFile } from "./types";
 
@@ -17,6 +19,7 @@ export interface MediaUploaderProps {
   maxFiles?: number;
   dropzoneLabel?: string;
   dropzoneHint?: string;
+  libraryItems?: LibraryItem[];
   onLibraryClick?: () => void;
   /** Lifecycle hooks — optional, useful for telemetry. None of them are required to use the component. */
   onPickerOpen?: () => void;
@@ -43,6 +46,7 @@ export function MediaUploader({
   maxFiles = 5,
   dropzoneLabel = "Upload your files here",
   dropzoneHint = "PNG, JPG, MP4 up to 50MB",
+  libraryItems = [],
   onLibraryClick,
   onPickerOpen,
   onFilesPicked,
@@ -52,6 +56,7 @@ export function MediaUploader({
   const inputRef = useRef<HTMLInputElement>(null);
   const [pendingFiles, setPendingFiles] = useState<UploadedFile[]>([]);
   const [isReviewOpen, setIsReviewOpen] = useState(false);
+  const [isLibraryOpen, setIsLibraryOpen] = useState(false);
   const [uploadProgress, setUploadProgress] = useState<Record<string, number> | null>(null);
   const cancelUploadRef = useRef<(() => void) | null>(null);
 
@@ -60,6 +65,16 @@ export function MediaUploader({
   function openPicker() {
     onPickerOpen?.();
     inputRef.current?.click();
+  }
+
+  function openLibrary() {
+    onLibraryClick?.();
+    setIsLibraryOpen(true);
+  }
+
+  function handleLibraryConfirm(items: LibraryItem[]) {
+    onChange([...value, ...items.map(libraryItemToUploadedFile)]);
+    setIsLibraryOpen(false);
   }
 
   function handleFileChange(event: ChangeEvent<HTMLInputElement>) {
@@ -111,18 +126,30 @@ export function MediaUploader({
 
   const isUploading = uploadProgress != null;
 
+  const canAddMore = value.length < maxFiles;
+  const availableLibraryItems = libraryItems.filter((item) => !value.some((file) => file.name === item.name));
+
   return (
     <div className="flex flex-col gap-3">
-      {value.length > 0 && <FilesDisplay files={value} onRemove={removeUploaded} variant={variant} />}
+      {value.length > 0 && (
+        <FilesDisplay
+          files={value}
+          onRemove={removeUploaded}
+          variant={variant}
+          canAddMore={variant === "gallery" && canAddMore}
+          onAddFromDevice={openPicker}
+          onAddFromLibrary={openLibrary}
+        />
+      )}
 
-      {value.length < maxFiles && (
+      {canAddMore && (variant === "list" || value.length === 0) && (
         <UploadEntryPoint
           icon={icon}
           label={dropzoneLabel}
           hint={`${dropzoneHint} You can add up to ${maxFiles}.`}
           compact={value.length > 0}
           onDeviceClick={openPicker}
-          onLibraryClick={onLibraryClick}
+          onLibraryClick={openLibrary}
         />
       )}
 
@@ -172,6 +199,16 @@ export function MediaUploader({
             )}
           </div>
         </Modal>
+      )}
+
+      {isLibraryOpen && (
+        <LibraryPickerModal
+          items={availableLibraryItems}
+          multiple={multiple}
+          maxSelectable={maxFiles - value.length}
+          onClose={() => setIsLibraryOpen(false)}
+          onConfirm={handleLibraryConfirm}
+        />
       )}
     </div>
   );

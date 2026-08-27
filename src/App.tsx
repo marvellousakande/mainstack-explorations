@@ -1,6 +1,7 @@
 import { useRef, useState } from "react";
 import { Toast } from "./components/review/Toast";
 import { ChevronLeftIcon, FileIcon, ImagePlusIcon } from "./components/upload/icons";
+import { FILE_LIBRARY, IMAGE_LIBRARY } from "./components/upload/libraryItems";
 import { MediaUploader } from "./components/upload/MediaUploader";
 import { MediaUploaderLegacy } from "./components/upload/MediaUploaderLegacy";
 import { MediaUploaderTabbed } from "./components/upload/MediaUploaderTabbed";
@@ -47,17 +48,16 @@ function App() {
   }
 
   const plural = (n: number) => (n === 1 ? "" : "s");
-  const onLibraryClick = () => showToast("Library picker isn't wired up in this exploration yet.");
 
   const coverProps = {
     icon: <ImagePlusIcon className="h-8 w-8 text-[var(--app-ink)]" />,
     variant: "gallery" as const,
     maxFiles: 5,
     accept: "image/*",
-    multiple: false,
+    multiple: true,
     dropzoneLabel: "Drop your product images here.",
     dropzoneHint: "1600 × 1200 (4:3) recommended, up to 10MB each.",
-    onLibraryClick,
+    libraryItems: IMAGE_LIBRARY,
     onSubmit: () => showToast("Cover image uploaded"),
   };
 
@@ -68,7 +68,7 @@ function App() {
     accept: ".pdf,.zip,.doc,.docx,.epub,application/pdf,application/zip",
     dropzoneLabel: "Drop your product file here.",
     dropzoneHint: "PDF, ZIP or DOCX, up to 500MB.",
-    onLibraryClick,
+    libraryItems: FILE_LIBRARY,
     onSubmit: (files: UploadedFile[]) => showToast(`${files.length} product file${plural(files.length)} uploaded`),
   };
 

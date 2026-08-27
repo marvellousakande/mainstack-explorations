@@ -2,9 +2,11 @@ import type { ReactNode } from "react";
 import { useEffect, useRef, useState, type ChangeEvent } from "react";
 import { FileRow } from "./FileRow";
 import { FilesDisplay } from "./FilesDisplay";
+import { LibraryPickerModal } from "./LibraryPickerModal";
 import { Modal } from "./Modal";
 import { UploadEntryPoint } from "./UploadEntryPoint";
 import { UploadIcon } from "./icons";
+import { libraryItemToUploadedFile, type LibraryItem } from "./libraryItems";
 import { simulateUpload } from "./simulateUpload";
 import { createUploadedFiles, revokeUploadedFiles, type UploadedFile } from "./types";
 
@@ -18,6 +20,7 @@ export interface MediaUploaderLegacyProps {
   maxFiles?: number;
   dropzoneLabel?: string;
   dropzoneHint?: string;
+  libraryItems?: LibraryItem[];
   onModalOpen?: () => void;
   onPickerOpen?: () => void;
   onFilesPicked?: (files: UploadedFile[]) => void;
@@ -45,6 +48,7 @@ export function MediaUploaderLegacy({
   maxFiles = 5,
   dropzoneLabel = "Upload your files here",
   dropzoneHint = "PNG, JPG, MP4 up to 50MB",
+  libraryItems = [],
   onModalOpen,
   onPickerOpen,
   onFilesPicked,
@@ -54,6 +58,7 @@ export function MediaUploaderLegacy({
 }: MediaUploaderLegacyProps) {
   const inputRef = useRef<HTMLInputElement>(null);
   const [isIntroOpen, setIsIntroOpen] = useState(false);
+  const [isLibraryOpen, setIsLibraryOpen] = useState(false);
   const [pendingFiles, setPendingFiles] = useState<UploadedFile[]>([]);
   const [isReviewOpen, setIsReviewOpen] = useState(false);
   const [uploadProgress, setUploadProgress] = useState<Record<string, number> | null>(null);
@@ -70,6 +75,17 @@ export function MediaUploaderLegacy({
     onPickerOpen?.();
     setIsIntroOpen(false);
     inputRef.current?.click();
+  }
+
+  function openLibrary() {
+    onLibraryClick?.();
+    setIsIntroOpen(false);
+    setIsLibraryOpen(true);
+  }
+
+  function handleLibraryConfirm(items: LibraryItem[]) {
+    onChange([...value, ...items.map(libraryItemToUploadedFile)]);
+    setIsLibraryOpen(false);
   }
 
   function handleFileChange(event: ChangeEvent<HTMLInputElement>) {
@@ -121,18 +137,30 @@ export function MediaUploaderLegacy({
 
   const isUploading = uploadProgress != null;
 
+  const canAddMore = value.length < maxFiles;
+  const availableLibraryItems = libraryItems.filter((item) => !value.some((file) => file.name === item.name));
+
   return (
     <div className="flex flex-col gap-3">
-      {value.length > 0 && <FilesDisplay files={value} onRemove={removeUploaded} variant={variant} />}
+      {value.length > 0 && (
+        <FilesDisplay
+          files={value}
+          onRemove={removeUploaded}
+          variant={variant}
+          canAddMore={variant === "gallery" && canAddMore}
+          onAddFromDevice={openIntro}
+          onAddFromLibrary={openLibrary}
+        />
+      )}
 
-      {value.length < maxFiles && (
+      {canAddMore && (variant === "list" || value.length === 0) && (
         <UploadEntryPoint
           icon={icon}
           label={dropzoneLabel}
           hint={`${dropzoneHint} You can add up to ${maxFiles}.`}
           compact={value.length > 0}
           onDeviceClick={openIntro}
-          onLibraryClick={onLibraryClick}
+          onLibraryClick={openLibrary}
         />
       )}
 
@@ -146,7 +174,7 @@ export function MediaUploaderLegacy({
             <>
               <button
                 type="button"
-                onClick={() => onLibraryClick?.()}
+                onClick={openLibrary}
                 className="rounded-full px-4 py-2 text-[13px] font-medium transition-colors hover:bg-black/5"
                 style={{ color: "var(--app-ink)" }}
               >
@@ -222,6 +250,16 @@ export function MediaUploaderLegacy({
             )}
           </div>
         </Modal>
+      )}
+
+      {isLibraryOpen && (
+        <LibraryPickerModal
+          items={availableLibraryItems}
+          multiple={multiple}
+          maxSelectable={maxFiles - value.length}
+          onClose={() => setIsLibraryOpen(false)}
+          onConfirm={handleLibraryConfirm}
+        />
       )}
     </div>
   );
