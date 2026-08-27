@@ -1,8 +1,6 @@
 import { useRef, useState } from "react";
 import { Toast } from "./components/review/Toast";
-import { FileListUploader } from "./components/upload/FileListUploader";
-import { ChevronLeftIcon } from "./components/upload/icons";
-import { ImageGalleryUploader } from "./components/upload/ImageGalleryUploader";
+import { ChevronLeftIcon, FileIcon, ImagePlusIcon } from "./components/upload/icons";
 import { MediaUploader } from "./components/upload/MediaUploader";
 import { MediaUploaderLegacy } from "./components/upload/MediaUploaderLegacy";
 import { MediaUploaderTabbed } from "./components/upload/MediaUploaderTabbed";
@@ -13,11 +11,10 @@ const MODE_LABEL: Record<Mode, string> = {
   current: "Current",
   fixed: "Fixed",
   tabbed: "Tabbed",
-  new: "New",
 };
 
 function App() {
-  const [mode, setMode] = useState<Mode>("new");
+  const [mode, setMode] = useState<Mode>("fixed");
   const [clicksToPicker, setClicksToPicker] = useState<number | null>(null);
   const [resetKey, setResetKey] = useState(0);
   const [coverFiles, setCoverFiles] = useState<UploadedFile[]>([]);
@@ -50,9 +47,29 @@ function App() {
   }
 
   const plural = (n: number) => (n === 1 ? "" : "s");
+  const onLibraryClick = () => showToast("Library picker isn't wired up in this exploration yet.");
 
-  const commonProps = {
-    onPickerOpen: () => setClicksToPicker(1),
+  const coverProps = {
+    icon: <ImagePlusIcon className="h-8 w-8 text-[var(--app-ink)]" />,
+    variant: "gallery" as const,
+    maxFiles: 5,
+    accept: "image/*",
+    multiple: false,
+    dropzoneLabel: "Drop your product images here.",
+    dropzoneHint: "1600 × 1200 (4:3) recommended, up to 10MB each.",
+    onLibraryClick,
+    onSubmit: () => showToast("Cover image uploaded"),
+  };
+
+  const productProps = {
+    icon: <FileIcon className="h-8 w-8 text-[var(--app-ink)]" />,
+    variant: "list" as const,
+    maxFiles: 3,
+    accept: ".pdf,.zip,.doc,.docx,.epub,application/pdf,application/zip",
+    dropzoneLabel: "Drop your product file here.",
+    dropzoneHint: "PDF, ZIP or DOCX, up to 500MB.",
+    onLibraryClick,
+    onSubmit: (files: UploadedFile[]) => showToast(`${files.length} product file${plural(files.length)} uploaded`),
   };
 
   return (
@@ -64,12 +81,35 @@ function App() {
               Product uploads
             </h1>
             <p className="text-[13px]" style={{ color: "var(--ink-soft)" }}>
-              The cover gallery matches production. The product file below has four takes on the upload step.
+              "Upload from device" and "Select from library" are the standard everywhere. Current/Fixed/Tabbed only changes what
+              happens after you click.
             </p>
           </div>
           <button type="button" onClick={handleReset} className="shrink-0 text-[12px] underline underline-offset-2" style={{ color: "var(--ink-faint)" }}>
             Reset
           </button>
+        </div>
+
+        <div className="flex flex-wrap items-center gap-2">
+          <div className="flex overflow-hidden rounded-full border" style={{ borderColor: "var(--line-strong)" }}>
+            {(Object.keys(MODE_LABEL) as Mode[]).map((m) => (
+              <button
+                key={m}
+                type="button"
+                onClick={() => handleModeChange(m)}
+                className="px-3.5 py-1.5 text-[13px] font-medium transition-colors"
+                style={mode === m ? { background: "var(--ink)", color: "var(--paper)" } : { color: "var(--ink-soft)" }}
+              >
+                {MODE_LABEL[m]}
+              </button>
+            ))}
+          </div>
+
+          {mode === "current" || mode === "fixed" ? (
+            <span className="text-[12px]" style={{ color: "var(--ink-faint)" }}>
+              clicks to open file picker: <strong style={{ color: "var(--ink)" }}>{clicksToPicker ?? "—"}</strong>
+            </span>
+          ) : null}
         </div>
 
         <section className="overflow-hidden rounded-2xl border" style={{ borderColor: "var(--app-line)", background: "var(--app-bg)", boxShadow: "var(--shadow-card)" }}>
@@ -125,13 +165,26 @@ function App() {
                 </p>
               </div>
 
-              <ImageGalleryUploader
-                key={`cover-${resetKey}`}
-                value={coverFiles}
-                onChange={setCoverFiles}
-                onLibraryClick={() => showToast("Library picker isn't wired up in this exploration yet.")}
-                onCapacityExceeded={(allowed) => showToast(`You can add up to ${allowed} photos.`)}
-              />
+              {mode === "current" ? (
+                <MediaUploaderLegacy
+                  key={`cover-current-${resetKey}`}
+                  value={coverFiles}
+                  onChange={setCoverFiles}
+                  onModalOpen={() => setClicksToPicker(1)}
+                  onPickerOpen={() => setClicksToPicker(2)}
+                  {...coverProps}
+                />
+              ) : mode === "tabbed" ? (
+                <MediaUploaderTabbed key={`cover-tabbed-${resetKey}`} value={coverFiles} onChange={setCoverFiles} {...coverProps} />
+              ) : (
+                <MediaUploader
+                  key={`cover-fixed-${resetKey}`}
+                  value={coverFiles}
+                  onChange={setCoverFiles}
+                  onPickerOpen={() => setClicksToPicker(1)}
+                  {...coverProps}
+                />
+              )}
             </div>
 
             <div className="flex flex-col gap-3 border-t pt-6" style={{ borderColor: "var(--app-line)" }}>
@@ -144,71 +197,24 @@ function App() {
                 </p>
               </div>
 
-              <div className="flex flex-wrap items-center gap-2">
-                <div className="flex overflow-hidden rounded-full border" style={{ borderColor: "var(--app-line-strong)" }}>
-                  {(Object.keys(MODE_LABEL) as Mode[]).map((m) => (
-                    <button
-                      key={m}
-                      type="button"
-                      onClick={() => handleModeChange(m)}
-                      className="px-3 py-1 text-[12px] font-medium transition-colors"
-                      style={mode === m ? { background: "var(--app-ink)", color: "var(--app-bg)" } : { color: "var(--app-muted)" }}
-                    >
-                      {MODE_LABEL[m]}
-                    </button>
-                  ))}
-                </div>
-                {(mode === "current" || mode === "fixed") && (
-                  <span className="text-[12px]" style={{ color: "var(--app-muted)" }}>
-                    clicks to open file picker: <strong style={{ color: "var(--app-ink)" }}>{clicksToPicker ?? "—"}</strong>
-                  </span>
-                )}
-              </div>
-
               {mode === "current" ? (
                 <MediaUploaderLegacy
                   key={`product-current-${resetKey}`}
                   value={productFiles}
                   onChange={setProductFiles}
-                  accept=".pdf,.zip,.doc,.docx,.epub,application/pdf,application/zip"
-                  dropzoneLabel="Upload your product file"
-                  dropzoneHint="PDF, ZIP or DOCX, up to 500MB"
                   onModalOpen={() => setClicksToPicker(1)}
                   onPickerOpen={() => setClicksToPicker(2)}
-                  onSubmit={(files) => showToast(`${files.length} product file${plural(files.length)} uploaded`)}
-                  onLibraryClick={() => showToast("Library picker isn't wired up in this exploration yet.")}
+                  {...productProps}
                 />
               ) : mode === "tabbed" ? (
-                <MediaUploaderTabbed
-                  key={`product-tabbed-${resetKey}`}
-                  value={productFiles}
-                  onChange={setProductFiles}
-                  accept=".pdf,.zip,.doc,.docx,.epub,application/pdf,application/zip"
-                  dropzoneLabel="Upload your product file"
-                  dropzoneHint="PDF, ZIP or DOCX, up to 500MB"
-                  {...commonProps}
-                  onSubmit={(files) => showToast(`${files.length} product file${plural(files.length)} uploaded`)}
-                />
-              ) : mode === "new" ? (
-                <FileListUploader
-                  key={`product-new-${resetKey}`}
-                  value={productFiles}
-                  onChange={setProductFiles}
-                  dropzoneLabel="Drop your product file here."
-                  dropzoneHint="PDF, ZIP or DOCX, up to 500MB."
-                  onLibraryClick={() => showToast("Library picker isn't wired up in this exploration yet.")}
-                  onCapacityExceeded={(allowed) => showToast(`You can add up to ${allowed} files.`)}
-                />
+                <MediaUploaderTabbed key={`product-tabbed-${resetKey}`} value={productFiles} onChange={setProductFiles} {...productProps} />
               ) : (
                 <MediaUploader
                   key={`product-fixed-${resetKey}`}
                   value={productFiles}
                   onChange={setProductFiles}
-                  accept=".pdf,.zip,.doc,.docx,.epub,application/pdf,application/zip"
-                  dropzoneLabel="Upload your product file"
-                  dropzoneHint="PDF, ZIP or DOCX, up to 500MB"
-                  {...commonProps}
-                  onSubmit={(files) => showToast(`${files.length} product file${plural(files.length)} uploaded`)}
+                  onPickerOpen={() => setClicksToPicker(1)}
+                  {...productProps}
                 />
               )}
             </div>

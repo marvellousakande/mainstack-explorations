@@ -1,8 +1,10 @@
+import type { ReactNode } from "react";
 import { useEffect, useRef, useState, type ChangeEvent } from "react";
 import { FileRow } from "./FileRow";
+import { FilesDisplay } from "./FilesDisplay";
 import { Modal } from "./Modal";
-import { Thumbnail } from "./Thumbnail";
-import { FileIcon, UploadIcon } from "./icons";
+import { UploadEntryPoint } from "./UploadEntryPoint";
+import { FileIcon } from "./icons";
 import { simulateUpload } from "./simulateUpload";
 import { createUploadedFiles, revokeUploadedFiles, type UploadedFile } from "./types";
 
@@ -11,8 +13,12 @@ export interface MediaUploaderTabbedProps {
   onChange: (files: UploadedFile[]) => void;
   accept?: string;
   multiple?: boolean;
+  variant?: "gallery" | "list";
+  icon: ReactNode;
+  maxFiles?: number;
   dropzoneLabel?: string;
   dropzoneHint?: string;
+  onLibraryClick?: () => void;
   onPickerOpen?: () => void;
   onFilesPicked?: (files: UploadedFile[]) => void;
   onSubmit?: (files: UploadedFile[]) => void;
@@ -35,8 +41,12 @@ export function MediaUploaderTabbed({
   onChange,
   accept = "image/*,video/*",
   multiple = true,
+  variant = "list",
+  icon,
+  maxFiles = 5,
   dropzoneLabel = "Upload your files here",
   dropzoneHint = "PNG, JPG, MP4 up to 50MB",
+  onLibraryClick,
   onPickerOpen,
   onFilesPicked,
   onSubmit,
@@ -107,24 +117,19 @@ export function MediaUploaderTabbed({
   const isUploading = uploadProgress != null;
 
   return (
-    <div>
-      <div className="grid grid-cols-3 gap-3 sm:grid-cols-4">
-        {value.map((file) => (
-          <Thumbnail key={file.id} file={file} onRemove={() => removeUploaded(file.id)} />
-        ))}
-        <button
-          type="button"
-          onClick={openPicker}
-          className="col-span-3 flex flex-col items-center justify-center gap-2 rounded-xl border-2 border-dashed px-4 py-8 text-center transition-colors hover:bg-black/[0.02] sm:col-span-4"
-          style={{ borderColor: "var(--app-line-strong)", color: "var(--app-ink)" }}
-        >
-          <UploadIcon className="h-6 w-6 text-[var(--app-muted)]" />
-          <span className="text-[13px] font-medium">{dropzoneLabel}</span>
-          <span className="text-[12px]" style={{ color: "var(--app-muted)" }}>
-            or <span className="underline">browse</span> · {dropzoneHint}
-          </span>
-        </button>
-      </div>
+    <div className="flex flex-col gap-3">
+      {value.length > 0 && <FilesDisplay files={value} onRemove={removeUploaded} variant={variant} />}
+
+      {value.length < maxFiles && (
+        <UploadEntryPoint
+          icon={icon}
+          label={dropzoneLabel}
+          hint={`${dropzoneHint} You can add up to ${maxFiles}.`}
+          compact={value.length > 0}
+          onDeviceClick={openPicker}
+          onLibraryClick={onLibraryClick}
+        />
+      )}
 
       <input ref={inputRef} type="file" multiple={multiple} accept={accept} onChange={handleFileChange} className="hidden" />
 
