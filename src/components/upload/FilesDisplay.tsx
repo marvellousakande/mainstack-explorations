@@ -1,5 +1,6 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, type MouseEvent } from "react";
 import { FileRow } from "./FileRow";
+import { FloatingMenu } from "./FloatingMenu";
 import { ImagePlusIcon, MoreIcon, TrashIcon } from "./icons";
 import type { UploadedFile } from "./types";
 
@@ -14,6 +15,8 @@ interface FilesDisplayProps {
   onAddFromLibrary?: () => void;
 }
 
+type OpenMenu = { type: "add"; rect: DOMRect } | { type: "more"; fileId: string; rect: DOMRect };
+
 /**
  * Renders files already committed via the review modal's Submit — by
  * the time they land here they've finished "uploading", so this is
@@ -21,8 +24,7 @@ interface FilesDisplayProps {
  */
 export function FilesDisplay({ files, onRemove, variant, canAddMore, onAddFromDevice, onAddFromLibrary }: FilesDisplayProps) {
   const [activeId, setActiveId] = useState<string | null>(files[0]?.id ?? null);
-  const [openMenuId, setOpenMenuId] = useState<string | null>(null);
-  const [isAddMenuOpen, setIsAddMenuOpen] = useState(false);
+  const [openMenu, setOpenMenu] = useState<OpenMenu | null>(null);
 
   useEffect(() => {
     if (!files.some((file) => file.id === activeId)) setActiveId(files[0]?.id ?? null);
@@ -41,6 +43,16 @@ export function FilesDisplay({ files, onRemove, variant, canAddMore, onAddFromDe
   }
 
   const activeImage = files.find((file) => file.id === activeId) ?? files[0];
+
+  function toggleAddMenu(event: MouseEvent<HTMLButtonElement>) {
+    const rect = event.currentTarget.getBoundingClientRect();
+    setOpenMenu((prev) => (prev?.type === "add" ? null : { type: "add", rect }));
+  }
+
+  function toggleMoreMenu(fileId: string, event: MouseEvent<HTMLButtonElement>) {
+    const rect = event.currentTarget.getBoundingClientRect();
+    setOpenMenu((prev) => (prev?.type === "more" && prev.fileId === fileId ? null : { type: "more", fileId, rect }));
+  }
 
   return (
     <div className="flex flex-col gap-3">
@@ -82,43 +94,16 @@ export function FilesDisplay({ files, onRemove, variant, canAddMore, onAddFromDe
                   <TrashIcon className="h-3 w-3" />
                 </button>
               ) : (
-                <div className="absolute right-1 top-1">
-                  <button
-                    type="button"
-                    onClick={() => setOpenMenuId((prev) => (prev === file.id ? null : file.id))}
-                    aria-label={`More options for ${file.name}`}
-                    className="grid h-6 w-6 place-items-center rounded-full shadow"
-                    style={{ background: "rgba(255,255,255,0.92)", color: "var(--app-muted)" }}
-                  >
-                    <MoreIcon className="h-3.5 w-3.5" />
-                  </button>
-                  {openMenuId === file.id && (
-                    <div
-                      className="absolute right-0 top-7 z-10 flex w-32 flex-col overflow-hidden rounded-lg border text-left text-[12px]"
-                      style={{ borderColor: "var(--app-line)", background: "var(--app-bg)", boxShadow: "var(--shadow-card)" }}
-                    >
-                      <button
-                        type="button"
-                        onClick={() => {
-                          setActiveId(file.id);
-                          setOpenMenuId(null);
-                        }}
-                        className="px-3 py-2 text-left transition-colors hover:bg-black/5"
-                        style={{ color: "var(--app-ink)" }}
-                      >
-                        Set as cover
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => onRemove(file.id)}
-                        className="px-3 py-2 text-left transition-colors hover:bg-black/5"
-                        style={{ color: "var(--app-ink)" }}
-                      >
-                        Delete
-                      </button>
-                    </div>
-                  )}
-                </div>
+                <button
+                  type="button"
+                  data-menu-trigger
+                  onClick={(event) => toggleMoreMenu(file.id, event)}
+                  aria-label={`More options for ${file.name}`}
+                  className="absolute right-1 top-1 grid h-6 w-6 place-items-center rounded-full shadow"
+                  style={{ background: "rgba(255,255,255,0.92)", color: "var(--app-muted)" }}
+                >
+                  <MoreIcon className="h-3.5 w-3.5" />
+                </button>
               )}
             </div>
           );
@@ -128,45 +113,71 @@ export function FilesDisplay({ files, onRemove, variant, canAddMore, onAddFromDe
           <div className="relative h-20 w-20 shrink-0">
             <button
               type="button"
-              onClick={() => setIsAddMenuOpen((prev) => !prev)}
+              data-menu-trigger
+              onClick={toggleAddMenu}
               aria-label="Add another photo"
               className="grid h-full w-full place-items-center rounded-xl border-2 border-dashed transition-colors hover:bg-black/[0.02]"
               style={{ borderColor: "var(--app-line-strong)", color: "var(--app-muted)" }}
             >
               <ImagePlusIcon className="h-5 w-5" />
             </button>
-            {isAddMenuOpen && (
-              <div
-                className="absolute left-0 top-full z-10 mt-1 flex w-40 flex-col overflow-hidden rounded-lg border text-left text-[12px]"
-                style={{ borderColor: "var(--app-line)", background: "var(--app-bg)", boxShadow: "var(--shadow-card)" }}
-              >
-                <button
-                  type="button"
-                  onClick={() => {
-                    setIsAddMenuOpen(false);
-                    onAddFromDevice?.();
-                  }}
-                  className="px-3 py-2 text-left transition-colors hover:bg-black/5"
-                  style={{ color: "var(--app-ink)" }}
-                >
-                  Upload from device
-                </button>
-                <button
-                  type="button"
-                  onClick={() => {
-                    setIsAddMenuOpen(false);
-                    onAddFromLibrary?.();
-                  }}
-                  className="px-3 py-2 text-left transition-colors hover:bg-black/5"
-                  style={{ color: "var(--app-ink)" }}
-                >
-                  Select from library
-                </button>
-              </div>
-            )}
           </div>
         )}
       </div>
+
+      {openMenu?.type === "add" && (
+        <FloatingMenu anchorRect={openMenu.rect} onClose={() => setOpenMenu(null)} align="left">
+          <button
+            type="button"
+            onClick={() => {
+              setOpenMenu(null);
+              onAddFromDevice?.();
+            }}
+            className="px-3 py-2 text-left transition-colors hover:bg-black/5"
+            style={{ color: "var(--app-ink)" }}
+          >
+            Upload from device
+          </button>
+          <button
+            type="button"
+            onClick={() => {
+              setOpenMenu(null);
+              onAddFromLibrary?.();
+            }}
+            className="px-3 py-2 text-left transition-colors hover:bg-black/5"
+            style={{ color: "var(--app-ink)" }}
+          >
+            Select from library
+          </button>
+        </FloatingMenu>
+      )}
+
+      {openMenu?.type === "more" && (
+        <FloatingMenu anchorRect={openMenu.rect} onClose={() => setOpenMenu(null)} align="right">
+          <button
+            type="button"
+            onClick={() => {
+              setActiveId(openMenu.fileId);
+              setOpenMenu(null);
+            }}
+            className="px-3 py-2 text-left transition-colors hover:bg-black/5"
+            style={{ color: "var(--app-ink)" }}
+          >
+            Set as cover
+          </button>
+          <button
+            type="button"
+            onClick={() => {
+              onRemove(openMenu.fileId);
+              setOpenMenu(null);
+            }}
+            className="px-3 py-2 text-left transition-colors hover:bg-black/5"
+            style={{ color: "var(--app-ink)" }}
+          >
+            Delete
+          </button>
+        </FloatingMenu>
+      )}
     </div>
   );
 }
